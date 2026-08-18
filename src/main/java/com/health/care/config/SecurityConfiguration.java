@@ -2,6 +2,8 @@ package com.health.care.config;
 
 import com.health.care.security.InMemoryUserStore;
 import com.health.care.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,12 +17,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -30,7 +30,9 @@ public class SecurityConfiguration {
     private final InMemoryUserStore userStore;
     private final PasswordEncoder passwordEncoder;
 
-    public SecurityConfiguration(JwtAuthenticationFilter jwtAuthenticationFilter, InMemoryUserStore userStore, PasswordEncoder passwordEncoder) {
+    public SecurityConfiguration(JwtAuthenticationFilter jwtAuthenticationFilter,
+                                 InMemoryUserStore userStore,
+                                 PasswordEncoder passwordEncoder) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userStore = userStore;
         this.passwordEncoder = passwordEncoder;
@@ -41,20 +43,56 @@ public class SecurityConfiguration {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                        // Authentication and operational documentation are public.
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/actuator/health",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html")
                         .permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/auth/users/*/roles").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/healthcare/health-programs").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/healthcare/doctors", "/api/healthcare/pharmacies").hasAnyRole("PATIENT", "DOCTOR", "PHARMACY_PARTNER", "HEALTH_MANAGER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/healthcare/doctors", "/api/healthcare/pharmacies").hasAnyRole("HEALTH_MANAGER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/healthcare/consultations").hasRole("PATIENT")
-                        .requestMatchers(HttpMethod.GET, "/api/healthcare/consultations").hasAnyRole("PATIENT", "DOCTOR")
-                        .requestMatchers(HttpMethod.PATCH, "/api/healthcare/consultations/*/status").hasAnyRole("PATIENT", "DOCTOR")
-                        .requestMatchers(HttpMethod.POST, "/api/healthcare/medicine-orders").hasRole("PATIENT")
-                        .requestMatchers(HttpMethod.GET, "/api/healthcare/medicine-orders").hasRole("PATIENT")
-                        .requestMatchers(HttpMethod.POST, "/api/healthcare/health-programs").hasAnyRole("HEALTH_MANAGER", "ADMIN")
-                        .requestMatchers("/api/healthcare/reminders/**").hasRole("PATIENT")
-                        .requestMatchers("/api/healthcare/revenue/**").hasAnyRole("HEALTH_MANAGER", "ADMIN")
+
+                        // Only administrators can assign persisted roles in MongoDB.
+                        .requestMatchers(HttpMethod.PUT, "/api/auth/users/*/roles")
+                        .hasRole("ADMIN")
+
+                        // DoctorController.
+                        .requestMatchers(HttpMethod.GET, "/api/doctors/available")
+                        .hasAnyRole("PATIENT", "DOCTOR", "PHARMACY_PARTNER", "HEALTH_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/doctors/register")
+                        .hasAnyRole("HEALTH_MANAGER", "ADMIN")
+
+                        // ConsultationController.
+                        .requestMatchers(HttpMethod.POST, "/api/consultations/book")
+                        .hasRole("PATIENT")
+                        .requestMatchers(HttpMethod.GET, "/api/consultations/my")
+                        .hasAnyRole("PATIENT", "DOCTOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/consultations/*/status")
+                        .hasAnyRole("PATIENT", "DOCTOR")
+
+                        // PharmacyController.
+                        .requestMatchers(HttpMethod.GET, "/api/pharmacies/available")
+                        .hasAnyRole("PATIENT", "DOCTOR", "PHARMACY_PARTNER", "HEALTH_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/pharmacies/add")
+                        .hasAnyRole("HEALTH_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/pharmacies/medicine-orders")
+                        .hasRole("PATIENT")
+                        .requestMatchers(HttpMethod.GET, "/api/pharmacies/medicine-orders")
+                        .hasRole("PATIENT")
+
+                        // PreventiveReminderController.
+                        .requestMatchers("/api/reminders/**")
+                        .hasRole("PATIENT")
+
+                        // The remaining health-program and revenue endpoints are owned by HealthcareController.
+                        .requestMatchers(HttpMethod.GET, "/api/healthcare/health-programs")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/healthcare/health-programs")
+                        .hasAnyRole("HEALTH_MANAGER", "ADMIN")
+                        .requestMatchers("/api/healthcare/revenue/**")
+                        .hasAnyRole("HEALTH_MANAGER", "ADMIN")
+
                         .anyRequest()
                         .authenticated())
                 .exceptionHandling(exceptions -> exceptions
@@ -69,12 +107,14 @@ public class SecurityConfiguration {
 
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, exception) -> writeSecurityError(response, HttpServletResponse.SC_UNAUTHORIZED, "Authentication is required");
+        return (request, response, exception) -> writeSecurityError(
+                response, HttpServletResponse.SC_UNAUTHORIZED, "Authentication is required");
     }
 
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
-        return (request, response, exception) -> writeSecurityError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied");
+        return (request, response, exception) -> writeSecurityError(
+                response, HttpServletResponse.SC_FORBIDDEN, "Access denied");
     }
 
     private void writeSecurityError(HttpServletResponse response, int status, String message) throws IOException {
