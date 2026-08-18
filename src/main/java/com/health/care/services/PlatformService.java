@@ -1,4 +1,9 @@
-package com.health.care.platform;
+package com.health.care.services;
+
+import com.health.care.dtos.*;
+import com.health.care.entities.*;
+import com.health.care.enums.*;
+import com.health.care.repositories.*;
 
 import com.health.care.dtos.*;
 import com.health.care.entities.*;

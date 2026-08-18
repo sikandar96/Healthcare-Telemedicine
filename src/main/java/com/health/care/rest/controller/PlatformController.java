@@ -1,4 +1,9 @@
-package com.health.care.platform;
+package com.health.care.rest.controller;
+
+import com.health.care.dtos.*;
+import com.health.care.entities.*;
+import com.health.care.enums.*;
+import com.health.care.services.PlatformService;
 
 import com.health.care.dtos.*;
 import com.health.care.entities.*;

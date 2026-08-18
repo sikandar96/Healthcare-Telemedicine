@@ -1,5 +1,10 @@
 package com.health.care.platform;
 
+import com.health.care.dtos.*;
+import com.health.care.entities.*;
+import com.health.care.repositories.*;
+import com.health.care.services.PlatformService;
+
 import com.health.care.dtos.AppointmentRequest;
 import com.health.care.dtos.ClinicalRecordRequest;
 import com.health.care.entities.ConsentRecord;
