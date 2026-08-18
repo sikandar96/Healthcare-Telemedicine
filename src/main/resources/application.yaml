@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: Healthcare-Telemedicine
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/Healthcare-Telemedicine}
+
+server:
+  port: 9008
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    header: ${JWT_HEADER:Authorization}
+    prefix: ${JWT_PREFIX:Bearer}
+    issuer: ${JWT_ISSUER:healthcare-telemedicine}
+  default-admin:
+    create: ${APP_DEFAULT_ADMIN_CREATE:false}
+    username: ${APP_DEFAULT_ADMIN_USERNAME:}
+    password: ${APP_DEFAULT_ADMIN_PASSWORD:}
+
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    use-root-path: true
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    com.health.care: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: INFO
