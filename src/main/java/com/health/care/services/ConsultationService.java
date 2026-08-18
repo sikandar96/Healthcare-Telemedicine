@@ -6,6 +6,8 @@ import com.health.care.entities.DoctorProfile;
 import com.health.care.enums.ConsultationStatus;
 import com.health.care.repositories.ConsultationRepository;
 import com.health.care.repositories.DoctorRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 @Service
 public class ConsultationService {
+    private static final Logger logger = LoggerFactory.getLogger(ConsultationService.class);
     private static final BigDecimal CONSULTATION_COMMISSION_RATE = new BigDecimal("0.15");
 
     private final ConsultationRepository consultations;
@@ -27,6 +30,7 @@ public class ConsultationService {
     }
 
     public Consultation bookConsultation(String patient, ConsultationRequest request) {
+        logger.info("Booking consultation for patient '{}' with doctor '{}'", patient, request.doctorId());
         DoctorProfile doctor = doctors.findById(request.doctorId())
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
         if (!doctor.isCertified() || !doctor.isAvailable()) {
@@ -37,7 +41,9 @@ public class ConsultationService {
         Consultation consultation = new Consultation(null, patient, doctor.getId(), doctor.getName(), request.type(),
                 ConsultationStatus.REQUESTED, request.scheduledAt(), null, null, fee, commission,
                 money(fee.subtract(commission)), "https://call.healthcare.local/room/" + UUID.randomUUID(), Instant.now());
-        return consultations.save(consultation);
+        Consultation saved = consultations.save(consultation);
+        logger.info("Consultation '{}' created for patient '{}'", saved.getId(), patient);
+        return saved;
     }
 
     public List<Consultation> patientConsultations(String patient) {
@@ -64,10 +70,13 @@ public class ConsultationService {
         if (consultation.getStatus() == ConsultationStatus.COMPLETED || consultation.getStatus() == ConsultationStatus.CANCELLED) {
             throw new IllegalArgumentException("A closed consultation cannot be updated");
         }
+        logger.info("Updating consultation '{}' to status '{}' by '{}'", id, status, caller);
         consultation.setStatus(status);
         if (status == ConsultationStatus.IN_PROGRESS) consultation.setStartedAt(Instant.now());
         if (status == ConsultationStatus.COMPLETED) consultation.setCompletedAt(Instant.now());
-        return consultations.save(consultation);
+        Consultation saved = consultations.save(consultation);
+        logger.info("Consultation '{}' updated to status '{}'", saved.getId(), saved.getStatus());
+        return saved;
     }
 
     private BigDecimal money(BigDecimal value) {

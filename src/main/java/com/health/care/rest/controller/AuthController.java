@@ -110,8 +110,12 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<List<String>>> updateRoles(
             @PathVariable String username,
             @Valid @RequestBody RoleUpdateRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String actor = authentication == null ? "unknown" : authentication.getName();
+        logger.info("Role update requested by '{}' for user '{}'", actor, username);
         UserDetails userDetails = mongoUserDetailsService.updateRoles(username, request.roles());
         List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
+        logger.info("Roles updated for user '{}' by '{}'", username, actor);
         return ResponseEntity.ok(HealthApiResponse.success(roles));
     }
 

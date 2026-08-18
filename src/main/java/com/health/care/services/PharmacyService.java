@@ -8,6 +8,8 @@ import com.health.care.entities.Pharmacy;
 import com.health.care.enums.MedicineOrderStatus;
 import com.health.care.repositories.MedicineOrderRepository;
 import com.health.care.repositories.PharmacyRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,6 +20,7 @@ import java.util.List;
 @Service
 public class PharmacyService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PharmacyService.class);
     private static final BigDecimal DELIVERY_FEE = new BigDecimal("40.00");
 
     private final PharmacyRepository pharmacies;
@@ -29,16 +32,22 @@ public class PharmacyService {
     }
 
     public Pharmacy addPharmacy(PharmacyRequest request) {
+        logger.info("Registering pharmacy partner '{}'", request.name());
         Pharmacy pharmacy = new Pharmacy(null, request.name(), request.address(), request.phone(), true, true,
                 money(request.commissionRate()));
-        return pharmacies.save(pharmacy);
+        Pharmacy saved = pharmacies.save(pharmacy);
+        logger.info("Pharmacy '{}' registered", saved.getId());
+        return saved;
     }
 
     public List<Pharmacy> availablePharmacies() {
-        return pharmacies.findByActiveTrueAndVerifiedTrue();
+        List<Pharmacy> available = pharmacies.findByActiveTrueAndVerifiedTrue();
+        logger.debug("Found {} available verified pharmacies", available.size());
+        return available;
     }
 
     public MedicineOrder placeMedicineOrder(String patient, MedicineOrderRequest request) {
+        logger.info("Placing medicine order for patient '{}' with pharmacy '{}'", patient, request.pharmacyId());
         Pharmacy pharmacy = pharmacies.findById(request.pharmacyId())
                 .filter(p -> p.isActive() && p.isVerified())
                 .orElseThrow(() -> new IllegalArgumentException("Verified pharmacy not found"));
@@ -50,8 +59,10 @@ public class PharmacyService {
         BigDecimal total = money(subtotal.add(DELIVERY_FEE));
         BigDecimal commission = money(subtotal.multiply(pharmacy.getCommissionRate().divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)));
         Instant now = Instant.now();
-        return medicineOrders.save(new MedicineOrder(null, patient, pharmacy.getId(), pharmacy.getName(), items,
+        MedicineOrder saved = medicineOrders.save(new MedicineOrder(null, patient, pharmacy.getId(), pharmacy.getName(), items,
                 subtotal, DELIVERY_FEE, total, commission, MedicineOrderStatus.PLACED, request.deliveryAddress(), now, now));
+        logger.info("Medicine order '{}' created for patient '{}'", saved.getId(), patient);
+        return saved;
     }
 
     public List<MedicineOrder> patientOrders(String patient) {
