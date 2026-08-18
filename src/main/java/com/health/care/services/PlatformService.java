@@ -5,12 +5,6 @@ import com.health.care.entities.*;
 import com.health.care.enums.*;
 import com.health.care.repositories.*;
 
-import com.health.care.dtos.*;
-import com.health.care.entities.*;
-import com.health.care.enums.*;
-
-import com.health.care.repositories.DoctorRepository;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class PlatformService {
+public class PlatformService implements PlatformOperations {
     private static final Logger logger = LoggerFactory.getLogger(PlatformService.class);
     private final DoctorVerificationRepository verifications;
     private final DoctorRepository doctors;

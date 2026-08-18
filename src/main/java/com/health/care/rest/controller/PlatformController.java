@@ -2,14 +2,7 @@ package com.health.care.rest.controller;
 
 import com.health.care.dtos.*;
 import com.health.care.entities.*;
-import com.health.care.enums.*;
-import com.health.care.services.PlatformService;
-
-import com.health.care.dtos.*;
-import com.health.care.entities.*;
-import com.health.care.enums.*;
-
-import com.health.care.dtos.HealthApiResponse;
+import com.health.care.services.PlatformOperations;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,8 +18,11 @@ import java.util.List;
 @Tag(name = "Platform Operations", description = "Appointments, clinical care, pharmacy, payments, notifications, consent, audit, and sponsored campaigns")
 @SecurityRequirement(name = "bearerAuth")
 public class PlatformController {
-    private final PlatformService service;
-    public PlatformController(PlatformService service) { this.service = service; }
+    private final PlatformOperations service;
+
+    public PlatformController(PlatformOperations service) {
+        this.service = service;
+    }
     private String user(Authentication auth) { return auth.getName(); }
 
     @PostMapping("/doctor-verifications")
