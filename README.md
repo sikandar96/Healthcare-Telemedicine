@@ -158,7 +158,13 @@ curl -X GET http://localhost:9008/api/hello \
 
 ### Environment Variables
 
-Create a `.env` file or set environment variables:
+Create a `.env` file or set environment variables. For the browser frontend, configure `APP_CORS_ALLOWED_ORIGINS` as a comma-separated list of trusted origins; the local defaults are `http://localhost:5173,http://localhost:4173`.
+
+```bash
+APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173
+```
+
+Create a `.env` file or set the remaining environment variables:
 
 ```bash
 # Database
