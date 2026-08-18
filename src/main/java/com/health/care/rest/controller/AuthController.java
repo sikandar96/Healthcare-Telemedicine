@@ -2,6 +2,8 @@ package com.health.care.rest.controller;
 
 import com.health.care.dtos.AuthRequest;
 import com.health.care.dtos.AuthResponse;
+import com.health.care.dtos.ForgotPasswordRequest;
+import com.health.care.dtos.ResetPasswordRequest;
 import com.health.care.dtos.HealthApiResponse;
 import com.health.care.dtos.RoleUpdateRequest;
 import com.health.care.security.MongoUserDetailsService;
@@ -91,7 +93,7 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<AuthResponse>> register(@Valid @RequestBody AuthRequest request) {
         logger.debug("Registration attempt for username: {}", request.username());
         try {
-            UserDetails userDetails = mongoUserDetailsService.register(request.username(), request.password());
+            UserDetails userDetails = mongoUserDetailsService.register(request.username(), request.password(), request.role(), request.email(), request.phone());
             List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
             String token = jwtService.generateToken(userDetails.getUsername(), roles);
             logger.info("New user '{}' registered successfully", request.username());
@@ -104,6 +106,18 @@ public class AuthController {
             logger.error("Unexpected error during registration for username: {}", request.username(), e);
             throw e;
         }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<HealthApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String token = mongoUserDetailsService.createResetToken(request.identifier());
+        return ResponseEntity.ok(HealthApiResponse.success("Password reset token generated", token));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<HealthApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        mongoUserDetailsService.resetPassword(request.token(), request.password());
+        return ResponseEntity.ok(HealthApiResponse.success("Password reset successfully", null));
     }
 
     @PutMapping("/users/{username}/roles")

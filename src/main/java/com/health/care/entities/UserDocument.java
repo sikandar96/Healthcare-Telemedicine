@@ -1,5 +1,6 @@
 package com.health.care.entities;
 
+import java.time.Instant;
 import java.util.List;
 
 import lombok.Data;
@@ -20,6 +21,14 @@ public class UserDocument {
     private String password;
 
     private List<String> roles = List.of("ROLE_PATIENT");
+
+    private String email;
+
+    private String phone;
+
+    private String resetToken;
+
+    private Instant resetTokenExpiresAt;
 
     public UserDocument() {
     }

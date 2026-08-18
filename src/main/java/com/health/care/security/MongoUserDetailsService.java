@@ -1,6 +1,9 @@
 package com.health.care.security;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 import com.health.care.entities.UserDocument;
 import com.health.care.repositories.UserRepository;
@@ -83,13 +86,47 @@ public class MongoUserDetailsService implements UserDetailsService {
     }
 
     public UserDetails register(String username, String password, String requestedRole) {
+        return register(username, password, requestedRole, null, null);
+    }
+
+    public UserDetails register(String username, String password, String requestedRole, String email, String phone) {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("User already exists: " + username);
         }
         String role = normalizeAuthority(requestedRole == null || requestedRole.isBlank() ? "ROLE_PATIENT" : requestedRole);
         UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of(role));
+        userDocument.setEmail(email == null || email.isBlank() ? null : email.trim().toLowerCase(java.util.Locale.ROOT));
+        userDocument.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
         userRepository.save(userDocument);
         return loadUserByUsername(username);
+    }
+
+    public String createResetToken(String identifier) {
+        UserDocument userDocument = findByIdentifier(identifier);
+        String token = UUID.randomUUID().toString();
+        userDocument.setResetToken(token);
+        userDocument.setResetTokenExpiresAt(Instant.now().plus(15, ChronoUnit.MINUTES));
+        userRepository.save(userDocument);
+        return token;
+    }
+
+    public void resetPassword(String token, String password) {
+        UserDocument userDocument = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Reset link is invalid or expired"));
+        if (userDocument.getResetTokenExpiresAt() == null || userDocument.getResetTokenExpiresAt().isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Reset link is invalid or expired");
+        }
+        userDocument.setPassword(passwordEncoder.encode(password));
+        userDocument.setResetToken(null);
+        userDocument.setResetTokenExpiresAt(null);
+        userRepository.save(userDocument);
+    }
+
+    private UserDocument findByIdentifier(String identifier) {
+        String normalized = identifier == null ? "" : identifier.trim();
+        return userRepository.findByUsername(normalized)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalized))
+                .orElseThrow(() -> new IllegalArgumentException("No account found for that username or email"));
     }
 
     public UserDetails updateRoles(String username, Collection<String> requestedRoles) {
