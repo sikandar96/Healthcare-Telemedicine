@@ -4,6 +4,9 @@ import com.health.care.dtos.AuthRequest;
 import com.health.care.dtos.AuthResponse;
 import com.health.care.dtos.ForgotPasswordRequest;
 import com.health.care.dtos.ResetPasswordRequest;
+import com.health.care.dtos.OtpRequest;
+import com.health.care.dtos.VerifyOtpRequest;
+import com.health.care.services.OtpDeliveryService;
 import com.health.care.dtos.HealthApiResponse;
 import com.health.care.dtos.RoleUpdateRequest;
 import com.health.care.security.MongoUserDetailsService;
@@ -112,6 +115,17 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         String token = mongoUserDetailsService.createResetToken(request.identifier());
         return ResponseEntity.ok(HealthApiResponse.success("Password reset token generated", token));
+    }
+
+    @PostMapping("/request-otp")
+    public ResponseEntity<HealthApiResponse<OtpDeliveryService.DeliveryResult>> requestOtp(@Valid @RequestBody OtpRequest request) {
+        return ResponseEntity.ok(HealthApiResponse.success(mongoUserDetailsService.requestOtp(request.identifier(), request.channel())));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<HealthApiResponse<String>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        String resetToken = mongoUserDetailsService.verifyOtp(request.identifier(), request.otp());
+        return ResponseEntity.ok(HealthApiResponse.success(resetToken));
     }
 
     @PostMapping("/reset-password")

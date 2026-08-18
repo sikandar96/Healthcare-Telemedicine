@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.health.care.entities.UserDocument;
 import com.health.care.repositories.UserRepository;
+import com.health.care.services.OtpDeliveryService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ public class MongoUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OtpDeliveryService otpDeliveryService;
     private static final Logger logger = LoggerFactory.getLogger(MongoUserDetailsService.class);
 
     @Value("${app.default-admin.create:false}")
@@ -37,9 +39,10 @@ public class MongoUserDetailsService implements UserDetailsService {
     @Value("${app.default-admin.password:}")
     private String defaultAdminPassword;
 
-    public MongoUserDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public MongoUserDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, OtpDeliveryService otpDeliveryService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.otpDeliveryService = otpDeliveryService;
     }
 
     @PostConstruct
@@ -110,15 +113,48 @@ public class MongoUserDetailsService implements UserDetailsService {
         return token;
     }
 
+    public OtpDeliveryService.DeliveryResult requestOtp(String identifier, String channel) {
+        UserDocument userDocument = findByIdentifier(identifier);
+        String otp = String.format("%06d", java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
+        userDocument.setResetOtpHash(passwordEncoder.encode(otp));
+        userDocument.setResetOtpExpiresAt(Instant.now().plus(10, ChronoUnit.MINUTES));
+        userDocument.setResetOtpChannel(channel == null ? "email" : channel.trim().toLowerCase(java.util.Locale.ROOT));
+        userDocument.setResetOtpVerified(false);
+        userRepository.save(userDocument);
+        return otpDeliveryService.deliver(userDocument.getEmail(), userDocument.getPhone(), channel, otp);
+    }
+
+    public String verifyOtp(String identifier, String otp) {
+        UserDocument userDocument = findByIdentifier(identifier);
+        if (userDocument.getResetOtpHash() == null || userDocument.getResetOtpExpiresAt() == null || userDocument.getResetOtpExpiresAt().isBefore(Instant.now())) {
+            throw new IllegalArgumentException("OTP is invalid or expired");
+        }
+        if (!passwordEncoder.matches(otp, userDocument.getResetOtpHash())) {
+            throw new IllegalArgumentException("OTP is invalid or expired");
+        }
+        userDocument.setResetOtpVerified(true);
+        userDocument.setResetToken(UUID.randomUUID().toString());
+        userDocument.setResetTokenExpiresAt(Instant.now().plus(10, ChronoUnit.MINUTES));
+        userRepository.save(userDocument);
+        return userDocument.getResetToken();
+    }
+
     public void resetPassword(String token, String password) {
         UserDocument userDocument = userRepository.findByResetToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Reset link is invalid or expired"));
         if (userDocument.getResetTokenExpiresAt() == null || userDocument.getResetTokenExpiresAt().isBefore(Instant.now())) {
             throw new IllegalArgumentException("Reset link is invalid or expired");
         }
+        if (!userDocument.isResetOtpVerified()) {
+            throw new IllegalArgumentException("Verify the OTP before resetting your password");
+        }
         userDocument.setPassword(passwordEncoder.encode(password));
         userDocument.setResetToken(null);
         userDocument.setResetTokenExpiresAt(null);
+        userDocument.setResetOtpHash(null);
+        userDocument.setResetOtpExpiresAt(null);
+        userDocument.setResetOtpChannel(null);
+        userDocument.setResetOtpVerified(false);
         userRepository.save(userDocument);
     }
 

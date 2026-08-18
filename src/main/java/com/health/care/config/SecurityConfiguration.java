@@ -58,6 +58,8 @@ public class SecurityConfiguration {
                                 "/api/auth/login",
                                 "/api/auth/register",
                                 "/api/auth/forgot-password",
+                                "/api/auth/request-otp",
+                                "/api/auth/verify-otp",
                                 "/api/auth/reset-password",
                                 "/actuator/health",
                                 "/swagger-ui/**",

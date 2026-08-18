@@ -1,6 +1,17 @@
 spring:
   application:
     name: Healthcare-Telemedicine
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
   data:
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/Healthcare-Telemedicine}
@@ -31,6 +42,13 @@ app:
     password: ${APP_DEFAULT_ADMIN_PASSWORD:}
   reminders:
     cron: ${APP_REMINDERS_CRON:0 0 8 * * *}
+  otp:
+    channel: ${APP_OTP_CHANNEL:email}
+    email:
+      from: ${APP_OTP_EMAIL_FROM:}
+    sms:
+      webhook-url: ${APP_OTP_SMS_WEBHOOK_URL:}
+    expose-in-response: ${APP_OTP_EXPOSE_IN_RESPONSE:false}
 
 springdoc:
   swagger-ui:

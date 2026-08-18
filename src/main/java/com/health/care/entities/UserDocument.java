@@ -30,6 +30,14 @@ public class UserDocument {
 
     private Instant resetTokenExpiresAt;
 
+    private String resetOtpHash;
+
+    private Instant resetOtpExpiresAt;
+
+    private String resetOtpChannel;
+
+    private boolean resetOtpVerified;
+
     public UserDocument() {
     }
 
