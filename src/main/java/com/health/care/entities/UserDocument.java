@@ -19,7 +19,7 @@ public class UserDocument {
 
     private String password;
 
-    private List<String> roles = List.of("ROLE_USER");
+    private List<String> roles = List.of("ROLE_PATIENT");
 
     public UserDocument() {
     }

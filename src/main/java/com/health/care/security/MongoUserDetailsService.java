@@ -66,7 +66,7 @@ public class MongoUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         List<String> roles = userDocument.getRoles() == null || userDocument.getRoles().isEmpty()
-                ? List.of("ROLE_USER") : userDocument.getRoles();
+                ? List.of("ROLE_PATIENT") : userDocument.getRoles();
         roles = roles.stream().map(this::normalizeAuthority).distinct().toList();
         List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
@@ -79,7 +79,7 @@ public class MongoUserDetailsService implements UserDetailsService {
     }
 
     public UserDetails register(String username, String password) {
-        return register(username, password, "ROLE_USER");
+        return register(username, password, "ROLE_PATIENT");
     }
 
     public UserDetails register(String username, String password, String requestedRole) {
@@ -108,7 +108,10 @@ public class MongoUserDetailsService implements UserDetailsService {
     }
 
     private String normalizeAuthority(String role) {
-        String normalized = role == null ? "ROLE_USER" : role.trim().toUpperCase(java.util.Locale.ROOT);
+        String normalized = role == null ? "ROLE_PATIENT" : role.trim().toUpperCase(java.util.Locale.ROOT);
+        if ("ROLE_USER".equals(normalized)) {
+            return "ROLE_PATIENT";
+        }
         return normalized.startsWith("ROLE_") ? normalized : "ROLE_" + normalized;
     }
 }
