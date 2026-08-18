@@ -4,6 +4,7 @@ import com.health.care.dtos.HealthApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.List;
 public class HealthcareController {
     private final HealthcareService service;
 
-    public HealthcareController(HealthcareService service) {
+    public HealthcareController(@Qualifier("healthcareFeatureService") HealthcareService service) {
         this.service = service;
     }
 

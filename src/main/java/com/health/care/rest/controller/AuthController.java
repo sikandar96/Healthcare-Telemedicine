@@ -3,7 +3,7 @@ package com.health.care.rest.controller;
 import com.health.care.dtos.AuthRequest;
 import com.health.care.dtos.AuthResponse;
 import com.health.care.dtos.HealthApiResponse;
-import com.health.care.security.AppRole;
+import com.health.care.dtos.RoleUpdateRequest;
 import com.health.care.security.InMemoryUserStore;
 import com.health.care.security.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +26,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -89,8 +91,7 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<AuthResponse>> register(@Valid @RequestBody AuthRequest request) {
         logger.debug("Registration attempt for username: {}", request.username());
         try {
-            AppRole requestedRole = AppRole.from(request.role());
-            UserDetails userDetails = userStore.register(request.username(), request.password(), requestedRole);
+            UserDetails userDetails = userStore.register(request.username(), request.password());
             List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
             String token = jwtService.generateToken(userDetails.getUsername(), roles);
             logger.info("New user '{}' registered successfully", request.username());
@@ -103,6 +104,15 @@ public class AuthController {
             logger.error("Unexpected error during registration for username: {}", request.username(), e);
             throw e;
         }
+    }
+
+    @PutMapping("/users/{username}/roles")
+    public ResponseEntity<HealthApiResponse<List<String>>> updateRoles(
+            @PathVariable String username,
+            @Valid @RequestBody RoleUpdateRequest request) {
+        UserDetails userDetails = userStore.updateRoles(username, request.roles());
+        List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
+        return ResponseEntity.ok(HealthApiResponse.success(roles));
     }
 
     @GetMapping("/me")

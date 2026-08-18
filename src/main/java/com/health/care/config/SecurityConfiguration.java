@@ -41,8 +41,9 @@ public class SecurityConfiguration {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
                         .permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/auth/users/*/roles").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/healthcare/health-programs").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/healthcare/doctors", "/api/healthcare/pharmacies").hasAnyRole("PATIENT", "DOCTOR", "PHARMACY_PARTNER", "HEALTH_MANAGER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/healthcare/doctors", "/api/healthcare/pharmacies").hasAnyRole("HEALTH_MANAGER", "ADMIN")

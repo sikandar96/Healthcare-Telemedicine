@@ -12,6 +12,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import java.util.Collection;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class InMemoryUserStore implements UserDetailsService {
         }
 
         if (!userRepository.existsByUsername(defaultAdminUsername)) {
-            register(defaultAdminUsername, defaultAdminPassword, AppRole.ADMIN);
+            register(defaultAdminUsername, defaultAdminPassword, "ROLE_ADMIN");
             logger.info("Default admin '{}' created. Disable this in production and rotate the password.", defaultAdminUsername);
         } else {
             logger.debug("Default admin '{}' already exists; skipping creation.", defaultAdminUsername);
@@ -65,11 +66,8 @@ public class InMemoryUserStore implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         List<String> roles = userDocument.getRoles() == null || userDocument.getRoles().isEmpty()
-                ? List.of(AppRole.PATIENT.authority()) : userDocument.getRoles();
-        if (roles.contains("ROLE_USER") && !roles.contains(AppRole.PATIENT.authority())) {
-            roles = new java.util.ArrayList<>(roles);
-            roles.add(AppRole.PATIENT.authority());
-        }
+                ? List.of("ROLE_USER") : userDocument.getRoles();
+        roles = roles.stream().map(this::normalizeAuthority).distinct().toList();
         List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
@@ -81,18 +79,36 @@ public class InMemoryUserStore implements UserDetailsService {
     }
 
     public UserDetails register(String username, String password) {
-        return register(username, password, AppRole.PATIENT);
+        return register(username, password, "ROLE_USER");
     }
 
-    public UserDetails register(String username, String password, AppRole role) {
+    public UserDetails register(String username, String password, String requestedRole) {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("User already exists: " + username);
         }
-        if (role == AppRole.ADMIN || role == AppRole.HEALTH_MANAGER || role == AppRole.PHARMACY_PARTNER) {
-            throw new IllegalArgumentException("Privileged roles must be provisioned by an administrator");
-        }
-        UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of(role.authority()));
+        String role = normalizeAuthority(requestedRole == null || requestedRole.isBlank() ? "ROLE_USER" : requestedRole);
+        UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of(role));
         userRepository.save(userDocument);
         return loadUserByUsername(username);
+    }
+
+    public UserDetails updateRoles(String username, Collection<String> requestedRoles) {
+        UserDocument userDocument = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        if (requestedRoles == null || requestedRoles.isEmpty()) {
+            throw new IllegalArgumentException("At least one role is required");
+        }
+        List<String> roles = requestedRoles.stream()
+                .map(this::normalizeAuthority)
+                .distinct()
+                .toList();
+        userDocument.setRoles(roles);
+        userRepository.save(userDocument);
+        return loadUserByUsername(username);
+    }
+
+    private String normalizeAuthority(String role) {
+        String normalized = role == null ? "ROLE_USER" : role.trim().toUpperCase(java.util.Locale.ROOT);
+        return normalized.startsWith("ROLE_") ? normalized : "ROLE_" + normalized;
     }
 }

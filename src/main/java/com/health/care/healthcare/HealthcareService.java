@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-@Service
+@Service("healthcareFeatureService")
 public class HealthcareService {
     private static final BigDecimal DELIVERY_FEE = new BigDecimal("40.00");
     private static final BigDecimal CONSULTATION_COMMISSION_RATE = new BigDecimal("0.15");
