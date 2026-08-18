@@ -9,6 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.health.care.dtos.AuthRequest;
+import com.health.care.entities.UserDocument;
+import com.health.care.repositories.UserRepository;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.List;
+
+import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,12 +32,21 @@ class JwtAuthenticationIntegrationTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
+
     private MockMvc mockMvc;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
+        UserDocument admin = new UserDocument("admin", "test-password-hash", List.of("ROLE_ADMIN"));
+        when(userRepository.findByUsername("admin")).thenReturn(java.util.Optional.of(admin));
+        when(passwordEncoder.matches("admin123", "test-password-hash")).thenReturn(true);
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
     }
 

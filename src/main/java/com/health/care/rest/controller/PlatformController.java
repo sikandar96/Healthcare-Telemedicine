@@ -60,8 +60,7 @@ public class PlatformController {
     @PatchMapping("/appointments/{id}/status")
     @Operation(summary = "Update appointment status")
     public ResponseEntity<HealthApiResponse<Appointment>> updateAppointment(@PathVariable String id, @Valid @RequestBody AppointmentStatusRequest request, Authentication auth) {
-        boolean doctor = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_DOCTOR"));
-        return ResponseEntity.ok(HealthApiResponse.success(service.updateAppointment(id, request.status(), user(auth), doctor)));
+        return ResponseEntity.ok(HealthApiResponse.success(service.updateAppointment(id, request.status(), user(auth))));
     }
 
     @PostMapping("/clinical-records")

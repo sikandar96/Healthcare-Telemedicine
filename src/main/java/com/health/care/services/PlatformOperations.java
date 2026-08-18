@@ -20,7 +20,7 @@ public interface PlatformOperations {
     List<Appointment> patientAppointments(String username);
     List<Appointment> doctorAppointments(String doctorId);
     List<Appointment> doctorAppointmentsForUser(String username);
-    Appointment updateAppointment(String id, AppointmentStatus status, String actor, boolean doctor);
+    Appointment updateAppointment(String id, AppointmentStatus status, String actor);
 
     ClinicalRecord createClinicalRecord(String doctor, ClinicalRecordRequest request);
     List<ClinicalRecord> patientRecords(String patient);

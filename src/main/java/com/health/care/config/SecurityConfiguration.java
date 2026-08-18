@@ -1,5 +1,8 @@
 package com.health.care.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.health.care.dtos.HealthApiResponse;
 import com.health.care.security.MongoUserDetailsService;
 import com.health.care.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +32,7 @@ public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final MongoUserDetailsService mongoUserDetailsService;
     private final PasswordEncoder passwordEncoder;
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     public SecurityConfiguration(JwtAuthenticationFilter jwtAuthenticationFilter,
                                  MongoUserDetailsService mongoUserDetailsService,
@@ -105,7 +109,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/platform/campaigns/active")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/platform/doctor-verifications")
-                        .hasAnyRole("DOCTOR", "PATIENT")
+                        .hasRole("DOCTOR")
                         .requestMatchers(HttpMethod.GET, "/api/platform/doctor-verifications/pending")
                         .hasAnyRole("HEALTH_MANAGER", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/platform/doctor-verifications/*")
@@ -188,7 +192,8 @@ public class SecurityConfiguration {
     private void writeSecurityError(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\",\"data\":null}");
+        response.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
+        response.getWriter().write(objectMapper.writeValueAsString(HealthApiResponse.error(message)));
     }
 
     @Bean

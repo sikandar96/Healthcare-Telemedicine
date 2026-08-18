@@ -101,13 +101,22 @@ public class PlatformService implements PlatformOperations {
         return doctorAppointments(doctorId);
     }
 
-    public Appointment updateAppointment(String id, AppointmentStatus status, String actor, boolean doctor) {
+    public Appointment updateAppointment(String id, AppointmentStatus status, String actor) {
         Appointment appointment = appointments.findById(id).orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
-        if (!doctor && !appointment.getPatientUsername().equals(actor)) throw new IllegalArgumentException("Appointment does not belong to user");
-        if (status == AppointmentStatus.CONFIRMED && !doctor) throw new IllegalArgumentException("Only a doctor can confirm an appointment");
+        boolean patientActor = appointment.getPatientUsername().equals(actor);
+        boolean doctorActor = doctors.findByUsername(actor)
+                .map(doctor -> doctor.getId().equals(appointment.getDoctorId()))
+                .orElse(false);
+        if (!patientActor && !doctorActor) {
+            throw new IllegalArgumentException("Appointment does not belong to user");
+        }
+        if (status == AppointmentStatus.CONFIRMED && !doctorActor) {
+            throw new IllegalArgumentException("Only the assigned doctor can confirm an appointment");
+        }
         appointment.setStatus(status);
         Appointment saved = appointments.save(appointment);
         audit(actor, "APPOINTMENT_" + status, "Appointment", id, "SUCCESS");
+        logger.info("Appointment '{}' status changed to '{}' by '{}'", id, status, actor);
         return saved;
     }
 
