@@ -19,6 +19,8 @@ app:
     create: ${APP_DEFAULT_ADMIN_CREATE:false}
     username: ${APP_DEFAULT_ADMIN_USERNAME:}
     password: ${APP_DEFAULT_ADMIN_PASSWORD:}
+  reminders:
+    cron: ${APP_REMINDERS_CRON:0 0 8 * * *}
 
 springdoc:
   swagger-ui:
