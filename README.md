@@ -1,5 +1,7 @@
 # Healthcare Telemedicine Platform
 
+> **Email OTP setup:** The password-recovery email is sent only when SMTP environment variables are configured. If they are blank, the backend intentionally logs a local-development warning instead of attempting delivery.
+
 A secure, scalable REST API for a healthcare telemedicine platform built with Spring Boot, featuring JWT-based authentication, MongoDB integration, and comprehensive API documentation.
 
 ## 📋 Table of Contents
@@ -181,7 +183,31 @@ JWT_ISSUER=healthcare-telemedicine
 APP_DEFAULT_ADMIN_CREATE=false
 APP_DEFAULT_ADMIN_USERNAME=admin
 APP_DEFAULT_ADMIN_PASSWORD=admin123
+
+# Email OTP delivery (required for real email delivery)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-gmail-address@example.com
+MAIL_PASSWORD=your-gmail-app-password
+MAIL_SMTP_AUTH=true
+MAIL_SMTP_STARTTLS=true
+APP_OTP_EMAIL_FROM=your-gmail-address@example.com
+
+# Optional SMS OTP delivery through a provider webhook
+APP_OTP_SMS_WEBHOOK_URL=
+
+# Local development only: return the OTP in the API response
+# Keep false in production.
+APP_OTP_EXPOSE_IN_RESPONSE=false
 ```
+
+### Email OTP delivery
+
+For Gmail, use a Google **App Password**, not the normal account password. Enable two-step verification on the sending account, create an app password, and use that generated value as `MAIL_PASSWORD`. Do not commit SMTP credentials to Git or place them in frontend environment variables.
+
+For another SMTP provider, replace `MAIL_HOST`, `MAIL_PORT`, and the TLS settings with that provider's documented values. After setting the variables, restart Spring Boot because mail configuration is loaded at startup.
+
+For local development without SMTP, set `APP_OTP_EXPOSE_IN_RESPONSE=true`. The UI will display the development OTP returned by the backend. Use this only locally; production should use a real email or SMS provider and keep the flag false.
 
 ### application.yaml
 
