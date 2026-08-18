@@ -11,4 +11,5 @@ public interface PaymentTransactionRepository extends MongoRepository<PaymentTra
     List<PaymentTransaction> findByPayerUsernameOrderByCreatedAtDesc(String username);
     List<PaymentTransaction> findByStatus(PaymentStatus status);
     List<PaymentTransaction> findByReferenceTypeAndReferenceId(String type, String referenceId);
+    Optional<PaymentTransaction> findByPayerUsernameAndIdempotencyKey(String payerUsername, String idempotencyKey);
 }

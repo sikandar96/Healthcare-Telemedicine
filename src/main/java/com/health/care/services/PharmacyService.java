@@ -11,6 +11,7 @@ import com.health.care.repositories.PharmacyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -46,6 +47,7 @@ public class PharmacyService {
         return available;
     }
 
+    @Transactional
     public MedicineOrder placeMedicineOrder(String patient, MedicineOrderRequest request) {
         logger.info("Placing medicine order for patient '{}' with pharmacy '{}'", patient, request.pharmacyId());
         Pharmacy pharmacy = pharmacies.findById(request.pharmacyId())

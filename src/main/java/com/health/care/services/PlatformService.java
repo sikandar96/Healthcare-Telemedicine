@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -48,6 +49,7 @@ public class PlatformService implements PlatformOperations {
         this.campaigns = campaigns;
     }
 
+    @Transactional
     public DoctorVerification submitVerification(VerificationRequest request, String actor) {
         if (!actor.equals(request.username())) {
             throw new IllegalArgumentException("Users may submit verification only for their own account");
@@ -64,6 +66,7 @@ public class PlatformService implements PlatformOperations {
         return verifications.findByStatusOrderBySubmittedAtAsc(VerificationStatus.PENDING);
     }
 
+    @Transactional
     public DoctorVerification decideVerification(String id, VerificationDecision decision, String reviewer) {
         DoctorVerification verification = verifications.findById(id).orElseThrow(() -> new IllegalArgumentException("Verification not found"));
         if (verification.getStatus() != VerificationStatus.PENDING) throw new IllegalArgumentException("Verification has already been decided");
@@ -120,6 +123,7 @@ public class PlatformService implements PlatformOperations {
         return saved;
     }
 
+    @Transactional
     public ClinicalRecord createClinicalRecord(String doctor, ClinicalRecordRequest request) {
         if (!request.patientConsent()) throw new IllegalArgumentException("Patient consent is required");
         ClinicalRecord record = new ClinicalRecord(null, request.patientUsername(), doctor, request.consultationId(), request.diagnosis(),
@@ -132,6 +136,7 @@ public class PlatformService implements PlatformOperations {
     public List<ClinicalRecord> patientRecords(String patient) { return clinicalRecords.findByPatientUsernameOrderByCreatedAtDesc(patient); }
     public List<ClinicalRecord> doctorRecords(String doctor) { return clinicalRecords.findByDoctorUsernameOrderByCreatedAtDesc(doctor); }
 
+    @Transactional
     public Prescription createPrescription(String doctor, PrescriptionRequest request) {
         Prescription prescription = new Prescription(null, request.patientUsername(), doctor, request.consultationId(),
                 request.items().stream().map(i -> new PrescriptionItem(i.medicineName(), i.dosage(), i.frequency(), i.durationDays())).toList(),
@@ -145,6 +150,7 @@ public class PlatformService implements PlatformOperations {
     public List<Prescription> patientPrescriptions(String patient) { return prescriptions.findByPatientUsernameOrderByIssuedAtDesc(patient); }
     public List<Prescription> doctorPrescriptions(String doctor) { return prescriptions.findByDoctorUsernameOrderByIssuedAtDesc(doctor); }
 
+    @Transactional
     public PharmacyInventory upsertInventory(InventoryRequest request, String actor) {
         PharmacyInventory item = inventory.findByPharmacyIdAndSku(request.pharmacyId(), request.sku())
                 .orElseGet(() -> new PharmacyInventory(null, request.pharmacyId(), request.medicineName(), request.sku(), 0, request.unitPrice(), request.prescriptionRequired(), Instant.now()));
@@ -155,6 +161,7 @@ public class PlatformService implements PlatformOperations {
         return saved;
     }
 
+    @Transactional
     public PharmacyInventory adjustInventory(String id, int quantity, String actor) {
         PharmacyInventory item = inventory.findById(id).orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
         item.setQuantity(quantity); item.setUpdatedAt(Instant.now());
@@ -165,15 +172,29 @@ public class PlatformService implements PlatformOperations {
 
     public List<PharmacyInventory> pharmacyInventory(String pharmacyId) { return inventory.findByPharmacyIdOrderByMedicineNameAsc(pharmacyId); }
 
-    public PaymentTransaction createPayment(String payer, PaymentRequest request) {
-        PaymentTransaction payment = new PaymentTransaction(null, payer, request.referenceType(), request.referenceId(), request.amount(),
-                request.currency().toUpperCase(), PaymentStatus.CREATED, null, Instant.now(), Instant.now());
-        PaymentTransaction saved = payments.save(payment);
-        notifyUser(payer, NotificationType.PAYMENT, "Payment created", "Your payment is ready to be processed");
-        audit(payer, "PAYMENT_CREATED", "PaymentTransaction", saved.getId(), "SUCCESS");
-        return saved;
+    @Transactional(noRollbackFor = DataIntegrityViolationException.class)
+    public PaymentTransaction createPayment(String payer, PaymentRequest request, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 128) {
+            throw new IllegalArgumentException("A nonblank Idempotency-Key of at most 128 characters is required");
+        }
+        String key = idempotencyKey.trim();
+        return payments.findByPayerUsernameAndIdempotencyKey(payer, key).orElseGet(() -> {
+            try {
+                Instant now = Instant.now();
+                PaymentTransaction payment = new PaymentTransaction(null, payer, key, request.referenceType(), request.referenceId(), request.amount(),
+                        request.currency().toUpperCase(), PaymentStatus.CREATED, null, now, now);
+                PaymentTransaction saved = payments.save(payment);
+                notifyUser(payer, NotificationType.PAYMENT, "Payment created", "Your payment is ready to be processed");
+                audit(payer, "PAYMENT_CREATED", "PaymentTransaction", saved.getId(), "SUCCESS");
+                return saved;
+            } catch (DataIntegrityViolationException duplicate) {
+                return payments.findByPayerUsernameAndIdempotencyKey(payer, key)
+                        .orElseThrow(() -> duplicate);
+            }
+        });
     }
 
+    @Transactional
     public PaymentTransaction updatePayment(String id, PaymentStatus status, String providerReference, String actor) {
         PaymentTransaction payment = payments.findById(id).orElseThrow(() -> new IllegalArgumentException("Payment not found"));
         payment.setStatus(status); payment.setProviderReference(providerReference); payment.setUpdatedAt(Instant.now());
@@ -197,6 +218,7 @@ public class PlatformService implements PlatformOperations {
         return notifications.save(notification);
     }
 
+    @Transactional
     public ConsentRecord grantConsent(String patient, ConsentRequest request) {
         ConsentRecord record = consents.findByPatientUsernameAndGrantedToAndPurpose(patient, request.grantedTo(), request.purpose())
                 .orElse(new ConsentRecord(null, patient, request.grantedTo(), request.purpose(), true, Instant.now(), null));
@@ -206,6 +228,7 @@ public class PlatformService implements PlatformOperations {
         return saved;
     }
 
+    @Transactional
     public ConsentRecord revokeConsent(String id, String patient) {
         ConsentRecord record = consents.findById(id).orElseThrow(() -> new IllegalArgumentException("Consent not found"));
         if (!record.getPatientUsername().equals(patient)) throw new IllegalArgumentException("Consent does not belong to user");
@@ -217,6 +240,7 @@ public class PlatformService implements PlatformOperations {
 
     public List<ConsentRecord> activeConsents(String patient) { return consents.findByPatientUsernameAndActiveTrue(patient); }
 
+    @Transactional
     public WellnessCampaign createCampaign(CampaignRequest request, String actor) {
         if (request.endDate().isBefore(request.startDate())) throw new IllegalArgumentException("Campaign end date must not precede start date");
         WellnessCampaign campaign = new WellnessCampaign(null, request.sponsor(), request.title(), request.description(), request.budget(),

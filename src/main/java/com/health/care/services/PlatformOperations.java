@@ -34,7 +34,7 @@ public interface PlatformOperations {
     PharmacyInventory adjustInventory(String id, int quantity, String actor);
     List<PharmacyInventory> pharmacyInventory(String pharmacyId);
 
-    PaymentTransaction createPayment(String payer, PaymentRequest request);
+    PaymentTransaction createPayment(String payer, PaymentRequest request, String idempotencyKey);
     PaymentTransaction updatePayment(String id, PaymentStatus status, String providerReference, String actor);
     List<PaymentTransaction> payments(String username);
 

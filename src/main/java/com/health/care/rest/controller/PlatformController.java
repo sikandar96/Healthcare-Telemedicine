@@ -99,7 +99,9 @@ public class PlatformController {
 
     @PostMapping("/payments")
     @Operation(summary = "Create a payment transaction")
-    public ResponseEntity<HealthApiResponse<PaymentTransaction>> createPayment(@Valid @RequestBody PaymentRequest request, Authentication auth) { return ResponseEntity.ok(HealthApiResponse.success(service.createPayment(user(auth), request))); }
+    public ResponseEntity<HealthApiResponse<PaymentTransaction>> createPayment(@Valid @RequestBody PaymentRequest request, @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey, Authentication auth) {
+        return ResponseEntity.ok(HealthApiResponse.success(service.createPayment(user(auth), request, idempotencyKey)));
+    }
 
     @GetMapping("/payments/mine")
     @Operation(summary = "List my payments")
