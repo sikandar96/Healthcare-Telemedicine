@@ -1,5 +1,9 @@
 package com.health.care.platform;
 
+import com.health.care.dtos.*;
+import com.health.care.entities.*;
+import com.health.care.enums.*;
+
 import com.health.care.dtos.HealthApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

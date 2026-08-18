@@ -1,5 +1,9 @@
 package com.health.care.platform;
 
+import com.health.care.dtos.*;
+import com.health.care.entities.*;
+import com.health.care.enums.*;
+
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDateTime;

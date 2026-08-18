@@ -1,5 +1,9 @@
 package com.health.care.platform;
 
+import com.health.care.dtos.*;
+import com.health.care.entities.*;
+import com.health.care.enums.*;
+
 import com.health.care.repositories.DoctorRepository;
 
 import org.slf4j.Logger;

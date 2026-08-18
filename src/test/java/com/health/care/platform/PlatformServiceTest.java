@@ -1,5 +1,9 @@
 package com.health.care.platform;
 
+import com.health.care.dtos.AppointmentRequest;
+import com.health.care.dtos.ClinicalRecordRequest;
+import com.health.care.entities.ConsentRecord;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
