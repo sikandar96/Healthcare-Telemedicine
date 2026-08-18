@@ -3,6 +3,7 @@ package com.health.care.rest.controller;
 import com.health.care.dtos.AuthRequest;
 import com.health.care.dtos.AuthResponse;
 import com.health.care.dtos.HealthApiResponse;
+import com.health.care.security.AppRole;
 import com.health.care.security.InMemoryUserStore;
 import com.health.care.security.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -61,9 +64,10 @@ public class AuthController {
 
             UserDetails principal = (UserDetails) authentication.getPrincipal();
             assert principal != null;
-            String token = jwtService.generateToken(principal.getUsername());
+            List<String> roles = principal.getAuthorities().stream().map(Object::toString).toList();
+            String token = jwtService.generateToken(principal.getUsername(), roles);
             logger.info("User '{}' logged in successfully", request.username());
-            AuthResponse payload = new AuthResponse(token, "Bearer", jwtService.getExpirationMs());
+            AuthResponse payload = new AuthResponse(token, "Bearer", jwtService.getExpirationMs(), roles);
             return ResponseEntity.ok(HealthApiResponse.success(payload));
         } catch (BadCredentialsException e) {
             logger.warn("Failed login attempt for username: {} - Invalid credentials", request.username());
@@ -85,10 +89,12 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<AuthResponse>> register(@Valid @RequestBody AuthRequest request) {
         logger.debug("Registration attempt for username: {}", request.username());
         try {
-            UserDetails userDetails = userStore.register(request.username(), request.password());
-            String token = jwtService.generateToken(userDetails.getUsername());
+            AppRole requestedRole = AppRole.from(request.role());
+            UserDetails userDetails = userStore.register(request.username(), request.password(), requestedRole);
+            List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
+            String token = jwtService.generateToken(userDetails.getUsername(), roles);
             logger.info("New user '{}' registered successfully", request.username());
-            AuthResponse payload = new AuthResponse(token, "Bearer", jwtService.getExpirationMs());
+            AuthResponse payload = new AuthResponse(token, "Bearer", jwtService.getExpirationMs(), roles);
             return ResponseEntity.ok(HealthApiResponse.success(payload));
         } catch (IllegalArgumentException e) {
             logger.warn("Registration failed for username: {} - {}", request.username(), e.getMessage());

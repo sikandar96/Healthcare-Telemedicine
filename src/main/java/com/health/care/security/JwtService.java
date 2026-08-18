@@ -2,6 +2,7 @@ package com.health.care.security;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -32,6 +33,10 @@ public class JwtService {
     }
 
     public String generateToken(String username) {
+        return generateToken(username, java.util.List.of());
+    }
+
+    public String generateToken(String username, Collection<String> roles) {
         Instant now = Instant.now();
         Instant expiration = now.plusMillis(jwtProperties.getExpirationMs());
 
@@ -39,6 +44,7 @@ public class JwtService {
         String token = Jwts.builder()
                 .subject(username)
                 .issuer(jwtProperties.getIssuer())
+                .claim("roles", roles == null ? java.util.List.of() : roles)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiration))
                 .signWith(secretKey, Jwts.SIG.HS256)

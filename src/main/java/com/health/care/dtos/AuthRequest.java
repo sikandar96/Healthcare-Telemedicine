@@ -8,5 +8,10 @@ public record AuthRequest(
         @Schema(description = "Username for authentication", example = "admin")
         @NotBlank String username,
         @Schema(description = "Password for authentication", example = "password123")
-        @NotBlank String password) {
+        @NotBlank String password,
+        @Schema(description = "Registration role. Privileged roles must be provisioned by an administrator", example = "PATIENT")
+        String role) {
+    public AuthRequest(String username, String password) {
+        this(username, password, null);
+    }
 }

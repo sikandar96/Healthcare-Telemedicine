@@ -52,7 +52,7 @@ public class InMemoryUserStore implements UserDetailsService {
         }
 
         if (!userRepository.existsByUsername(defaultAdminUsername)) {
-            register(defaultAdminUsername, defaultAdminPassword);
+            register(defaultAdminUsername, defaultAdminPassword, AppRole.ADMIN);
             logger.info("Default admin '{}' created. Disable this in production and rotate the password.", defaultAdminUsername);
         } else {
             logger.debug("Default admin '{}' already exists; skipping creation.", defaultAdminUsername);
@@ -64,7 +64,13 @@ public class InMemoryUserStore implements UserDetailsService {
         UserDocument userDocument = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        List<SimpleGrantedAuthority> authorities = userDocument.getRoles().stream()
+        List<String> roles = userDocument.getRoles() == null || userDocument.getRoles().isEmpty()
+                ? List.of(AppRole.PATIENT.authority()) : userDocument.getRoles();
+        if (roles.contains("ROLE_USER") && !roles.contains(AppRole.PATIENT.authority())) {
+            roles = new java.util.ArrayList<>(roles);
+            roles.add(AppRole.PATIENT.authority());
+        }
+        List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
@@ -75,11 +81,17 @@ public class InMemoryUserStore implements UserDetailsService {
     }
 
     public UserDetails register(String username, String password) {
+        return register(username, password, AppRole.PATIENT);
+    }
+
+    public UserDetails register(String username, String password, AppRole role) {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("User already exists: " + username);
         }
-
-        UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of("ROLE_USER"));
+        if (role == AppRole.ADMIN || role == AppRole.HEALTH_MANAGER || role == AppRole.PHARMACY_PARTNER) {
+            throw new IllegalArgumentException("Privileged roles must be provisioned by an administrator");
+        }
+        UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of(role.authority()));
         userRepository.save(userDocument);
         return loadUserByUsername(username);
     }
