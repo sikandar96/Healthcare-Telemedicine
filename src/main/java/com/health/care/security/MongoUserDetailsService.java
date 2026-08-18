@@ -19,11 +19,11 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.Nonnull;
 
 @Service
-public class InMemoryUserStore implements UserDetailsService {
+public class MongoUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private static final Logger logger = LoggerFactory.getLogger(InMemoryUserStore.class);
+    private static final Logger logger = LoggerFactory.getLogger(MongoUserDetailsService.class);
 
     @Value("${app.default-admin.create:false}")
     private boolean createDefaultAdmin;
@@ -34,7 +34,7 @@ public class InMemoryUserStore implements UserDetailsService {
     @Value("${app.default-admin.password:}")
     private String defaultAdminPassword;
 
-    public InMemoryUserStore(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public MongoUserDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }

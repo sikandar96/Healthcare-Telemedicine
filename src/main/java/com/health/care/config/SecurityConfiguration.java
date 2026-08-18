@@ -1,6 +1,6 @@
 package com.health.care.config;
 
-import com.health.care.security.InMemoryUserStore;
+import com.health.care.security.MongoUserDetailsService;
 import com.health.care.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -27,14 +27,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfiguration {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final InMemoryUserStore userStore;
+    private final MongoUserDetailsService mongoUserDetailsService;
     private final PasswordEncoder passwordEncoder;
 
     public SecurityConfiguration(JwtAuthenticationFilter jwtAuthenticationFilter,
-                                 InMemoryUserStore userStore,
+                                 MongoUserDetailsService mongoUserDetailsService,
                                  PasswordEncoder passwordEncoder) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.userStore = userStore;
+        this.mongoUserDetailsService = mongoUserDetailsService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -125,7 +125,7 @@ public class SecurityConfiguration {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userStore);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(mongoUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }

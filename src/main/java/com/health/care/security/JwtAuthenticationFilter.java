@@ -25,12 +25,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
-    private final InMemoryUserStore userStore;
+    private final MongoUserDetailsService mongoUserDetailsService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, JwtProperties jwtProperties, InMemoryUserStore userStore) {
+    public JwtAuthenticationFilter(JwtService jwtService, JwtProperties jwtProperties, MongoUserDetailsService mongoUserDetailsService) {
         this.jwtService = jwtService;
         this.jwtProperties = jwtProperties;
-        this.userStore = userStore;
+        this.mongoUserDetailsService = mongoUserDetailsService;
     }
 
     @Override
@@ -57,7 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = jwtService.extractUsername(token);
             if (StringUtils.hasText(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
                 logger.debug("Authenticating user: {} with JWT token", username);
-                UserDetails userDetails = userStore.loadUserByUsername(username);
+                UserDetails userDetails = mongoUserDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,

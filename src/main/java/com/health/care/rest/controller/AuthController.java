@@ -4,7 +4,7 @@ import com.health.care.dtos.AuthRequest;
 import com.health.care.dtos.AuthResponse;
 import com.health.care.dtos.HealthApiResponse;
 import com.health.care.dtos.RoleUpdateRequest;
-import com.health.care.security.InMemoryUserStore;
+import com.health.care.security.MongoUserDetailsService;
 import com.health.care.security.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,12 +40,12 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationManager authenticationManager;
-    private final InMemoryUserStore userStore;
+    private final MongoUserDetailsService mongoUserDetailsService;
     private final JwtService jwtService;
 
-    public AuthController(AuthenticationManager authenticationManager, InMemoryUserStore userStore, JwtService jwtService) {
+    public AuthController(AuthenticationManager authenticationManager, MongoUserDetailsService mongoUserDetailsService, JwtService jwtService) {
         this.authenticationManager = authenticationManager;
-        this.userStore = userStore;
+        this.mongoUserDetailsService = mongoUserDetailsService;
         this.jwtService = jwtService;
     }
 
@@ -91,7 +91,7 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<AuthResponse>> register(@Valid @RequestBody AuthRequest request) {
         logger.debug("Registration attempt for username: {}", request.username());
         try {
-            UserDetails userDetails = userStore.register(request.username(), request.password());
+            UserDetails userDetails = mongoUserDetailsService.register(request.username(), request.password());
             List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
             String token = jwtService.generateToken(userDetails.getUsername(), roles);
             logger.info("New user '{}' registered successfully", request.username());
@@ -110,7 +110,7 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<List<String>>> updateRoles(
             @PathVariable String username,
             @Valid @RequestBody RoleUpdateRequest request) {
-        UserDetails userDetails = userStore.updateRoles(username, request.roles());
+        UserDetails userDetails = mongoUserDetailsService.updateRoles(username, request.roles());
         List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
         return ResponseEntity.ok(HealthApiResponse.success(roles));
     }
