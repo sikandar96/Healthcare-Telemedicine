@@ -51,7 +51,9 @@ public class ConsultationController {
     })
     @GetMapping("/my")
     public ResponseEntity<HealthApiResponse<List<Consultation>>> consultations(Authentication auth) {
-        return ResponseEntity.ok(HealthApiResponse.success(service.patientConsultations(auth.getName())));
+        boolean doctor = auth.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_DOCTOR".equals(authority.getAuthority()));
+        return ResponseEntity.ok(HealthApiResponse.success(service.consultationsFor(auth.getName(), doctor)));
     }
 
     @Operation(summary = "Update consultation status", description = "Updates a consultation status after validating that the authenticated user participates in it.")

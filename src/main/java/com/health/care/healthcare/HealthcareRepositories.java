@@ -9,6 +9,7 @@ import java.util.Optional;
 @Repository("healthcareDoctorRepository")
 interface DoctorRepository extends MongoRepository<DoctorProfile, String> {
     List<DoctorProfile> findByCertifiedTrueAndAvailableTrue();
+    Optional<DoctorProfile> findByUsername(String username);
 }
 
 @Repository("healthcareConsultationRepository")

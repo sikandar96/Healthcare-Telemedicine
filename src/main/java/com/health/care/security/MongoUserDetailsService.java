@@ -86,7 +86,7 @@ public class MongoUserDetailsService implements UserDetailsService {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("User already exists: " + username);
         }
-        String role = normalizeAuthority(requestedRole == null || requestedRole.isBlank() ? "ROLE_USER" : requestedRole);
+        String role = normalizeAuthority(requestedRole == null || requestedRole.isBlank() ? "ROLE_PATIENT" : requestedRole);
         UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of(role));
         userRepository.save(userDocument);
         return loadUserByUsername(username);

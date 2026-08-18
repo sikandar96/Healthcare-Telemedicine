@@ -53,7 +53,9 @@ public class HealthcareController {
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Consultations returned"), @ApiResponse(responseCode = "401", description = "Authentication required"), @ApiResponse(responseCode = "403", description = "Insufficient role")})
     @GetMapping("/consultations")
     public ResponseEntity<HealthApiResponse<List<Consultation>>> consultations(Authentication auth) {
-        return ResponseEntity.ok(HealthApiResponse.success(service.patientConsultations(auth.getName())));
+        boolean doctor = auth.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_DOCTOR".equals(authority.getAuthority()));
+        return ResponseEntity.ok(HealthApiResponse.success(service.consultationsFor(auth.getName(), doctor)));
     }
 
     @Operation(summary = "Update consultation status", description = "Updates a consultation status after participant validation.")

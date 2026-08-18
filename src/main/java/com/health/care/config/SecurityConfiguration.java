@@ -85,6 +85,22 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/reminders/**")
                         .hasRole("PATIENT")
 
+                        // HealthcareController consolidated routes mirror the dedicated controller policy.
+                        .requestMatchers(HttpMethod.GET, "/api/healthcare/doctors", "/api/healthcare/pharmacies")
+                        .hasAnyRole("PATIENT", "DOCTOR", "PHARMACY_PARTNER", "HEALTH_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/healthcare/doctors", "/api/healthcare/pharmacies")
+                        .hasAnyRole("HEALTH_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/healthcare/consultations", "/api/healthcare/medicine-orders")
+                        .hasRole("PATIENT")
+                        .requestMatchers(HttpMethod.GET, "/api/healthcare/consultations")
+                        .hasAnyRole("PATIENT", "DOCTOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/healthcare/consultations/*/status")
+                        .hasAnyRole("PATIENT", "DOCTOR")
+                        .requestMatchers(HttpMethod.GET, "/api/healthcare/medicine-orders")
+                        .hasRole("PATIENT")
+                        .requestMatchers("/api/healthcare/reminders/**")
+                        .hasRole("PATIENT")
+
                         // The remaining health-program and revenue endpoints are owned by HealthcareController.
                         .requestMatchers(HttpMethod.GET, "/api/healthcare/health-programs")
                         .permitAll()

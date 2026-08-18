@@ -44,6 +44,15 @@ public class ConsultationService {
         return consultations.findByPatientUsernameOrderByScheduledAtDesc(patient);
     }
 
+    public List<Consultation> consultationsFor(String username, boolean doctor) {
+        if (!doctor) {
+            return patientConsultations(username);
+        }
+        DoctorProfile profile = doctors.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Doctor profile not found"));
+        return consultations.findByDoctorIdOrderByScheduledAtDesc(profile.getId());
+    }
+
     public Consultation updateConsultation(String id, String caller, ConsultationStatus status) {
         Consultation consultation = consultations.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Consultation not found"));
