@@ -205,13 +205,15 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        String configuredOrigins = System.getenv().getOrDefault("APP_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:4173");
+        String configuredOrigins = System.getenv().getOrDefault(
+                "APP_CORS_ALLOWED_ORIGINS",
+                "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173");
         configuration.setAllowedOrigins(Arrays.stream(configuredOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isBlank())
                 .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
+        configuration.setAllowedHeaders(List.of("Accept", "Origin", "X-Requested-With", "Cache-Control", "Content-Type", "Authorization", "Idempotency-Key"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(false);
 
