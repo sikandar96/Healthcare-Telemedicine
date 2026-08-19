@@ -22,9 +22,13 @@ public class UserDocument {
 
     private List<String> roles = List.of("ROLE_PATIENT");
 
+    @Indexed(unique = true, sparse = true)
     private String email;
 
+    @Indexed(unique = true, sparse = true)
     private String phone;
+
+    private String fullName;
 
     private String resetToken;
 

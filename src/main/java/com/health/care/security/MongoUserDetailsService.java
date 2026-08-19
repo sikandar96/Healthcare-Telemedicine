@@ -68,8 +68,12 @@ public class MongoUserDetailsService implements UserDetailsService {
 
     @Override
     public @Nonnull UserDetails loadUserByUsername(@Nonnull String username) throws UsernameNotFoundException {
-        UserDocument userDocument = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        UserDocument userDocument;
+        try {
+            userDocument = findByIdentifier(username);
+        } catch (IllegalArgumentException exception) {
+            throw new UsernameNotFoundException("User not found: " + username, exception);
+        }
 
         List<String> roles = userDocument.getRoles() == null || userDocument.getRoles().isEmpty()
                 ? List.of("ROLE_PATIENT") : userDocument.getRoles();
@@ -89,17 +93,32 @@ public class MongoUserDetailsService implements UserDetailsService {
     }
 
     public UserDetails register(String username, String password, String requestedRole) {
-        return register(username, password, requestedRole, null, null);
+        return register(username, password, requestedRole, null, null, null);
     }
 
     public UserDetails register(String username, String password, String requestedRole, String email, String phone) {
+        return register(username, password, requestedRole, email, phone, null);
+    }
+
+    public UserDetails register(String username, String password, String requestedRole, String email, String phone, String fullName) {
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedPhone = normalizePhone(phone);
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("User already exists: " + username);
         }
+        if (normalizedEmail != null && userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new IllegalArgumentException("Email is already registered: " + normalizedEmail);
+        }
+        if (normalizedPhone != null && (userRepository.findByPhone(normalizedPhone).isPresent()
+                || findByPhoneDigits(normalizedPhone).isPresent())) {
+            throw new IllegalArgumentException("Mobile number is already registered");
+        }
         String role = normalizeAuthority(requestedRole == null || requestedRole.isBlank() ? "ROLE_PATIENT" : requestedRole);
         UserDocument userDocument = new UserDocument(username, passwordEncoder.encode(password), List.of(role));
-        userDocument.setEmail(email == null || email.isBlank() ? null : email.trim().toLowerCase(java.util.Locale.ROOT));
-        userDocument.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
+        userDocument.setEmail(normalizedEmail);
+        userDocument.setPhone(normalizedPhone);
+        userDocument.setFullName(fullName == null || fullName.isBlank() ? username : fullName.trim());
+        userDocument.setFullName(fullName == null || fullName.isBlank() ? username : fullName.trim());
         userRepository.save(userDocument);
         return loadUserByUsername(username);
     }
@@ -160,14 +179,39 @@ public class MongoUserDetailsService implements UserDetailsService {
 
     private UserDocument findByIdentifier(String identifier) {
         String normalized = identifier == null ? "" : identifier.trim();
+        String normalizedPhone = normalizePhone(normalized);
+        String phoneDigits = normalizedPhone == null ? "" : normalizedPhone.replaceAll("\\D", "");
+        String lastTenDigits = phoneDigits.length() > 10 ? phoneDigits.substring(phoneDigits.length() - 10) : phoneDigits;
         return userRepository.findByUsername(normalized)
                 .or(() -> userRepository.findByEmailIgnoreCase(normalized))
-                .orElseThrow(() -> new IllegalArgumentException("No account found for that username or email"));
+                .or(() -> userRepository.findByPhone(normalized))
+                .or(() -> lastTenDigits.isBlank() ? java.util.Optional.empty() : userRepository.findByPhoneContaining(lastTenDigits))
+                .orElseThrow(() -> new IllegalArgumentException("No account found for that username, email, or mobile number"));
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) return null;
+        return email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) return null;
+        return phone.trim().replaceAll("[\\s()-]", "");
+    }
+
+    private java.util.Optional<UserDocument> findByPhoneDigits(String phone) {
+        String digits = phone.replaceAll("\\D", "");
+        String lastTenDigits = digits.length() > 10 ? digits.substring(digits.length() - 10) : digits;
+        return lastTenDigits.isBlank() ? java.util.Optional.empty() : userRepository.findByPhoneContaining(lastTenDigits);
     }
 
     public UserDetails updateRoles(String username, Collection<String> requestedRoles) {
-        UserDocument userDocument = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        UserDocument userDocument;
+        try {
+            userDocument = findByIdentifier(username);
+        } catch (IllegalArgumentException exception) {
+            throw new UsernameNotFoundException("User not found: " + username, exception);
+        }
         if (requestedRoles == null || requestedRoles.isEmpty()) {
             throw new IllegalArgumentException("At least one role is required");
         }

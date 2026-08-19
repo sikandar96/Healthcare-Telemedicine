@@ -96,7 +96,7 @@ public class AuthController {
     public ResponseEntity<HealthApiResponse<AuthResponse>> register(@Valid @RequestBody AuthRequest request) {
         logger.debug("Registration attempt for username: {}", request.username());
         try {
-            UserDetails userDetails = mongoUserDetailsService.register(request.username(), request.password(), request.role(), request.email(), request.phone());
+            UserDetails userDetails = mongoUserDetailsService.register(request.username(), request.password(), request.role(), request.email(), request.phone(), request.fullName());
             List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).toList();
             String token = jwtService.generateToken(userDetails.getUsername(), roles);
             logger.info("New user '{}' registered successfully", request.username());
